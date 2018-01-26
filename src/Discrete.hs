@@ -8,199 +8,179 @@
 {-# LANGUAGE TypeOperators #-}
 
 {-# OPTIONS_GHC -fno-warn-missing-methods #-}
+{-# OPTIONS_GHC -Wall #-}
 
 module Data.Discrete
   ( Discrete(..)
   ) where
 
-import Data.Fixed
+import Control.Applicative ((<$>))
+import Data.Either
+import Data.Maybe
 import Data.Monoid
-import Data.Proxy
 import Data.Functor.Const
 import Data.Functor.Identity
-import Data.Semigroup hiding (First(..), Last(..))
-import Data.Type.Coercion
 import Data.Type.Equality
 import GHC.Base
-import GHC.Char
 import GHC.Enum (Bounded(..))
 import GHC.Int
 import GHC.Num
 import GHC.Real
-import GHC.Unicode
 import GHC.Word
 
 class Discrete a where
   {-# MINIMAL pr, su #-}
-  pr :: a -> a
-  su :: a -> a
+  su :: a -> Maybe a
+  pr :: a -> Maybe a
 
 deriving newtype instance Discrete (f a) => Discrete (Alt f a)
 deriving newtype instance Discrete a => Discrete (Identity a)
 deriving newtype instance Discrete a => Discrete (Const a b)
-deriving anyclass instance Discrete (GeneralCategory)
-
-instance Discrete (Fixed a) where
-  su (MkFixed a) = MkFixed (su a)
-  pr (MkFixed a) = MkFixed (pr a)
 
 instance Discrete a => Discrete (Maybe a) where
-  su Nothing  = error "dont"
+  su Nothing  = Nothing
   su (Just x) = Just (su x)
-  pr Nothing  = error "dont"
+  pr Nothing  = Nothing
   pr (Just x) = Just (pr x)
 
 instance Integral a => Discrete (Ratio a) where
   {-# SPECIALIZE instance Discrete Rational #-} 
-  su x = x + 1
-  pr x = x - 1
-
-instance Discrete a => Discrete (Min a) where
-  su (Min a) = Min (su a)
-  pr (Min a) = Min (pr a)
-
-instance Discrete a => Discrete (Max a) where
-  su (Max a) = Max (su a)
-  pr (Max a) = Max (pr a)
-
-instance Discrete a => Discrete (First a) where
-  su (First a) = First (su a)
-  pr (First a) = First (pr a)
-
-instance Discrete a => Discrete (Last a) where
-  su (Last a) = Last (su a)
-  pr (Last a) = Last (pr a)
-
-instance Discrete a => Discrete (WrappedMonoid a) where
-  su (WrapMonoid a) = WrapMonoid (su a)
-  pr (WrapMonoid a) = WrapMonoid (pr a)
+  su x = Just $ x + 1
+  pr x = Just $ x - 1
 
 instance a ~ b => Discrete (a :~: b) where
-  pr _ = Refl
-  su _ = Refl
+  su _ = Just Refl
+  pr _ = Just Refl
 
 instance a ~~ b => Discrete (a :~~: b) where
-  pr _ = HRefl
-  su _ = HRefl
+  su _ = Just HRefl
+  pr _ = Just HRefl
 
-instance Discrete (Proxy s) where
-  su _ = error "dont"
-  pr _ = error "dont"
+instance Discrete () where
+  su _ = Just ()
+  pr _ = Just ()
 
-instance Coercible a b => Discrete (Coercion a b) where
-  su _ = error "dont"
-  pr _ = error "dont"
+instance (Bounded b, Discrete a, Discrete b) => Discrete (a,b) where
+  su (a,b) = maybe (flip (,) minBound <$> su a) (Just . (,) a) (su b)
+  pr (a,b) = maybe (flip (,) maxBound <$> pr a) (Just . (,) a) (pr b)
+
+instance (Bounded a, Bounded b, Discrete a, Discrete b) => Discrete (Either a b) where
+  su (Left a) = maybe (Just $ Right minBound) (Just . Left) (su a)
+  su (Right b) = maybe (Nothing) (Just . Right) (su b)
+  
+  pr (Left a) = maybe (Nothing) (Just . Left) (pr a)
+  pr (Right b) = maybe (Just $ Left maxBound) (Just . Right) (pr b)
 
 instance Discrete Bool where
-  su False = True
-  su True  = error "dont"
+  su False = Just True
+  su _     = Nothing
 
-  pr True  = False
-  pr False = error "dont"
+  pr True  = Just False
+  pr _     = Nothing
 
 instance Discrete Ordering where
-  su LT = EQ
-  su EQ = GT
-  su GT = error "dont"
+  su LT = Just EQ
+  su EQ = Just GT
+  su GT = Nothing
 
-  pr GT = EQ
-  pr EQ = LT
-  pr LT = error "dont"
+  pr GT = Just EQ
+  pr EQ = Just LT
+  pr LT = Nothing
 
 instance Discrete Char where
   su (C# c#)
-    | isTrue# (ord# c# /=# 0x10FFFF#) = C# (chr# (ord# c# +# 1#))
-    | otherwise = error "DONT"
+    | isTrue# (ord# c# /=# 0x10FFFF#) = Just $ C# (chr# (ord# c# +# 1#))
+    | otherwise = Nothing
   pr (C# c#)
-    | isTrue# (ord# c# /=# 0#) = C# (chr# (ord# c# -# 1#))
-    | otherwise = error "dont"
+    | isTrue# (ord# c# /=# 0#) = Just $ C# (chr# (ord# c# -# 1#))
+    | otherwise = Nothing
 
 instance Discrete Integer where
-  su x = x + 1
-  pr x = x - 1
+  su x = Just $ x + 1
+  pr x = Just $ x - 1
 
 instance Discrete Int where
   su x
-    | x == maxBound = error "dont"
-    | otherwise     = x + 1
+    | x == maxBound = Nothing
+    | otherwise     = Just $ x + 1
   
   pr x
-    | x == minBound = error "dont"
-    | otherwise     = x - 1
+    | x == minBound = Nothing
+    | otherwise     = Just $ x - 1
 
 instance Discrete Int8 where
   su x
-    | x == maxBound = error "dont"
-    | otherwise     = x + 1
+    | x == maxBound = Nothing
+    | otherwise     = Just $ x + 1
   
   pr x
-    | x == minBound = error "dont"
-    | otherwise     = x - 1
+    | x == minBound = Nothing
+    | otherwise     = Just $ x - 1
 
 instance Discrete Int16 where
   su x
-    | x == maxBound = error "dont"
-    | otherwise     = x + 1
+    | x == maxBound = Nothing
+    | otherwise     = Just $ x + 1
   
   pr x
-    | x == minBound = error "dont"
-    | otherwise     = x - 1
+    | x == minBound = Nothing
+    | otherwise     = Just $ x - 1
 
 instance Discrete Int32 where
   su x
-    | x == maxBound = error "dont"
-    | otherwise     = x + 1
+    | x == maxBound = Nothing
+    | otherwise     = Just $ x + 1
   
   pr x
-    | x == minBound = error "dont"
-    | otherwise     = x - 1
+    | x == minBound = Nothing
+    | otherwise     = Just $ x - 1
 
 instance Discrete Int64 where
   su x
-    | x == maxBound = error "dont"
-    | otherwise     = x + 1
+    | x == maxBound = Nothing
+    | otherwise     = Just $ x + 1
   
   pr x
-    | x == minBound = error "dont"
-    | otherwise     = x - 1
+    | x == minBound = Nothing
+    | otherwise     = Just $ x - 1
 
 instance Discrete Word where
   su x
-    | x /= maxBound = x + 1
-    | otherwise     = error "dont"
+    | x /= maxBound = Just $ x + 1
+    | otherwise     = Nothing
   pr x
-    | x /= minBound = x - 1
-    | otherwise     = error "dont"
+    | x /= minBound = Just $ x - 1
+    | otherwise     = Nothing
 
 instance Discrete Word8 where
     su x
-        | x /= maxBound = x + 1
-        | otherwise     = error "dont"
+        | x /= maxBound = Just $ x + 1
+        | otherwise     = Nothing
     pr x
-        | x /= minBound = x - 1
-        | otherwise     = error "dont"
+        | x /= minBound = Just $ x - 1
+        | otherwise     = Nothing
 
 instance Discrete Word16 where
     su x
-        | x /= maxBound = x + 1
-        | otherwise     = error "dont"
+        | x /= maxBound = Just $ x + 1
+        | otherwise     = Nothing
     pr x
-        | x /= minBound = x - 1
-        | otherwise     = error "dont"
+        | x /= minBound = Just $ x - 1
+        | otherwise     = Nothing
 
 instance Discrete Word32 where
     su x
-        | x /= maxBound = x + 1
-        | otherwise     = error "dont"
+        | x /= maxBound = Just $ x + 1
+        | otherwise     = Nothing
     pr x
-        | x /= minBound = x - 1
-        | otherwise     = error "dont"
+        | x /= minBound = Just $ x - 1
+        | otherwise     = Nothing
 
 instance Discrete Word64 where
     su x
-        | x /= maxBound = x + 1
-        | otherwise     = error "dont"
+        | x /= maxBound = Just $ x + 1
+        | otherwise     = Nothing
     pr x
-        | x /= minBound = x - 1
-        | otherwise     = error "dont"
+        | x /= minBound = Just $ x - 1
+        | otherwise     = Nothing
 

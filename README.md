@@ -4,19 +4,12 @@ This library provides a typeclass replacement for 'GHC.Enum.Enum' called 'Discre
 
 The laws of 'Discrete' are simple:
 
-A discrete type is a set A with at least one element x, along with two functions, succ : A -> A, and pred : A -> A, such that the following holds:
+A discrete type is a set A with at least one element, along with two functions, succ :: a -> Maybe a, and pred :: a -> Maybe a, such that the following hold:
 
-succ . pred = pred . succ = id
+Succ retracts pred: pred >=> succ >=> pred = pred
+Pred retracts succ: succ >=> pred >=> succ = succ
 
 and, such that for any (x : A), all values in X can be constructed with only x, succ, and pred.
-
-To write a 'Discrete' instance for a type 'A', one must provide the following three things:
-
-<ol>
-  <li>a value x : A. This value is arbitrary, but serves as a proof that the type is inhabited.</li>
-  <li>A definition of succ : A -> A such that the laws of construction of values in A hold.</li>
-  <li>A definition of pred : A -> A such that the laws of construction of values in A hold.</li>
-</ol>
 
 This means that 'Int' is a discrete type, because given any x : Int, one can construct any other Int with succ x = x + 1, and pred x = x - 1.
 
