@@ -20,151 +20,158 @@ import GHC.Num
 import GHC.Real
 import GHC.Word
 
+-- | Similar to 'Discrete' but 'msucc' and 'mpred' experience 'wrap-around' for
+--   'Bounded' types.
+-- 
+--   @'msucc' . 'mpred' = 'id'@
+--   @'mpred' . 'msucc' = 'id'@
+--   @'msucc' 'maxBound' = 'minBound'@
+--   @'mpred' 'minBound' = 'maxBound'@
 class Modular a where
-  {-# MINIMAL pr, su #-}
-  su :: a -> a
-  pr :: a -> a
+  {-# MINIMAL mpred, msucc #-}
+  msucc :: a -> a
+  mpred :: a -> a
 
 instance Modular a => Modular (Maybe a) where
-  su Nothing = Nothing
-  su (Just x) = Just (su x)
-  pr Nothing = Nothing
-  pr (Just x) = Just (pr x)
+  msucc Nothing = Nothing
+  msucc (Just x) = Just (msucc x)
+  mpred Nothing = Nothing
+  mpred (Just x) = Just (mpred x)
 
 instance Integral a => Modular (Ratio a) where
   {-# SPECIALIZE instance Modular Rational #-}
-  su x = x + 1
-  pr x = x - 1
+  msucc x = x + 1
+  mpred x = x - 1
 
 instance a ~ b => Modular (a :~: b) where
-  su _ = Refl
-  pr _ = Refl
+  msucc _ = Refl
+  mpred _ = Refl
 
 instance a ~~ b => Modular (a :~~: b) where
-  su _ = HRefl
-  pr _ = HRefl
+  msucc _ = HRefl
+  mpred _ = HRefl
 
 instance Modular () where
-  su _ = ()
-  pr _ = ()
+  msucc _ = ()
+  mpred _ = ()
 
 instance (Modular a, Modular b) => Modular (a,b) where
-  su (a,b) = (su a, su b)
-  pr (a,b) = (pr a, pr b)
+  msucc (a,b) = (msucc a, msucc b)
+  mpred (a,b) = (mpred a, mpred b)
 
 instance (Modular a, Modular b) => Modular (Either a b) where
-  su (Left a) = Left $ (su a)
-  su (Right b) = Right $ (su b)
+  msucc (Left a) = Left $ (msucc a)
+  msucc (Right b) = Right $ (msucc b)
 
-  pr (Left a) = Left $ (pr a)
-  pr (Right b) = Right $ (pr b)
+  mpred (Left a) = Left $ (mpred a)
+  mpred (Right b) = Right $ (mpred b)
 
 instance Modular Bool where
-  su False = True
-  su _     = False
+  msucc False = True
+  msucc _     = False
 
-  pr True  = False
-  pr _     = True
+  mpred True  = False
+  mpred _     = True
 
 instance Modular Ordering where
-  su LT = EQ
-  su EQ = GT
-  su GT = LT
+  msucc LT = EQ
+  msucc EQ = GT
+  msucc GT = LT
 
-  pr GT = EQ
-  pr EQ = LT
-  pr LT = GT
+  mpred GT = EQ
+  mpred EQ = LT
+  mpred LT = GT
 
 instance Modular Integer where
-  su x = x + 1
-  pr x = x - 1
+  msucc x = x + 1
+  mpred x = x - 1
 
 instance Modular Int where
-  su x
+  msucc x
     | x == maxBound = minBound
     | otherwise     = x + 1
 
-  pr x
+  mpred x
     | x == minBound = maxBound
     | otherwise     = x - 1
 
 
 instance Modular Int8 where
-  su x
+  msucc x
     | x == maxBound = minBound
     | otherwise     = x + 1
 
-  pr x
+  mpred x
     | x == minBound = maxBound
     | otherwise     = x - 1
 
 instance Modular Int16 where
-  su x
+  msucc x
     | x == maxBound = minBound
     | otherwise     = x + 1
 
-  pr x
+  mpred x
     | x == minBound = maxBound
     | otherwise     = x - 1
 
 instance Modular Int32 where
-  su x
+  msucc x
     | x == maxBound = minBound
     | otherwise     = x + 1
 
-  pr x
+  mpred x
     | x == minBound = maxBound
     | otherwise     = x - 1
 
 instance Modular Int64 where
-  su x
+  msucc x
     | x == maxBound = minBound
     | otherwise     = x + 1
 
-  pr x
+  mpred x
     | x == minBound = maxBound
     | otherwise     = x - 1
 
 instance Modular Word where
-  su x
+  msucc x
     | x == maxBound = minBound
     | otherwise     = x + 1
-  pr x
+  mpred x
     | x == minBound = maxBound
     | otherwise     = x - 1
 
 instance Modular Word8 where
-  su x
+  msucc x
     | x == maxBound = minBound
     | otherwise     = x + 1
 
-  pr x
+  mpred x
     | x == minBound = maxBound
     | otherwise     = x - 1
 
 instance Modular Word16 where
-  su x
+  msucc x
     | x == maxBound = minBound
     | otherwise     = x + 1
 
-  pr x
+  mpred x
     | x == minBound = maxBound
     | otherwise     = x - 1
 
 instance Modular Word32 where
-  su x
+  msucc x
     | x == maxBound = minBound
     | otherwise     = x + 1
 
-  pr x
+  mpred x
     | x == minBound = maxBound
     | otherwise     = x - 1
 
 instance Modular Word64 where
-  su x
+  msucc x
     | x == maxBound = minBound
     | otherwise     = x + 1
 
-  pr x
+  mpred x
     | x == minBound = maxBound
     | otherwise     = x - 1
